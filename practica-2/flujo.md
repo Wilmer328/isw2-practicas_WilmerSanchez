@@ -12,3 +12,5 @@ Trunk-Based Development trabaja principalmente sobre una sola rama principal. La
 
 Para una aplicación web elegiría Trunk-Based porque facilita la integración continua, reduce los conflictos entre ramas y permite publicar nuevas funciones con mayor rapidez. También mejora la colaboración del equipo y mantiene el código siempre actualizado.
 
+En conclusión, Trunk-Based es el flujo que usaría para una aplicación web moderna por su simplicidad y rapidez para integrar cambios.
+
