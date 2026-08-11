@@ -44,3 +44,5 @@ Facilita pruebas unitarias.
 
 Permite cambiar implementaciones fácilmente.
 
+Nota adicional: la inyección de dependencias facilita las pruebas unitarias.
+
