@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Unit Tests AAA — April Collections</title>
+<style>
+  :root {
+    --rose: #c8697a;
+    --rose-light: #f5dde1;
+    --rose-dark: #9e3f52;
+    --gold: #c9a96e;
+    --cream: #fdf8f4;
+    --charcoal: #2a2024;
+    --muted: #7a6570;
+    --success: #4a9e7a;
+    --success-light: #d6f0e6;
+    --danger: #c85a4a;
+    --danger-light: #fde8e4;
+    --white: #ffffff;
+    --border: #e8d8dc;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', 'DM Sans', sans-serif; background: var(--cream); color: var(--charcoal); padding: 24px; }
+  .header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+  .brand-icon { width: 34px; height: 34px; background: var(--rose); border-radius: 9px; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+  h1 { font-size: 20px; }
+  h1 span { color: var(--gold); }
+  .subtitle { color: var(--muted); font-size: 13px; margin-top: 2px; }
+  .summary { display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
+  .summary-card { background: var(--white); border-radius: 12px; padding: 14px 20px; box-shadow: 0 2px 12px rgba(42,32,36,0.08); text-align: center; min-width: 110px; }
+  .summary-card .num { font-size: 26px; font-weight: 700; }
+  .summary-card .label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 3px; }
+  .summary-card.pass .num { color: var(--success); }
+  .summary-card.fail .num { color: var(--danger); }
+  .group { background: var(--white); border-radius: 12px; padding: 16px; margin-bottom: 14px; box-shadow: 0 2px 12px rgba(42,32,36,0.08); }
+  .group-title { font-size: 14px; font-weight: 600; margin-bottom: 10px; color: var(--rose-dark); }
+  .test { display: flex; align-items: flex-start; gap: 10px; padding: 8px 10px; border-radius: 8px; margin-bottom: 6px; font-size: 13px; }
+  .test.pass { background: var(--success-light); color: #1f5c43; }
+  .test.fail { background: var(--danger-light); color: #7a2a1f; }
+  .test .icon { font-weight: 700; }
+  .test .name { flex: 1; }
+  .test .detail { font-size: 11px; margin-top: 3px; opacity: 0.85; font-family: monospace; white-space: pre-wrap; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 10px; font-weight: 600; }
+  .badge-aaa { background: var(--rose-light); color: var(--rose-dark); }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="brand-icon">💎</div>
+  <div>
+    <h1>April <span>Collections</span> — Unit Tests</h1>
+    <div class="subtitle">Patrón AAA (Arrange · Act · Assert) · se ejecuta en el navegador</div>
+  </div>
+</div>
+
+<div class="summary">
+  <div class="summary-card pass"><div class="num" id="total">0</div><div class="label">Total</div></div>
+  <div class="summary-card pass"><div class="num" id="pasados">0</div><div class="label">Pasados</div></div>
+  <div class="summary-card fail"><div class="num" id="fallidos">0</div><div class="label">Fallidos</div></div>
+</div>
+
+<div id="resultados"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+// LÓGICA DE NEGOCIO (extraída de april_collections_app.html)
+// ═══════════════════════════════════════════════════════════════
+const Logica = {
+  calcularPrecioVenta(costo, margen) {
+    const precio = costo * (1 + margen / 100);
+    return { precio, ganancia: precio - costo };
+  },
+  calcularMargen(costo, precio) {
+    if (costo <= 0) return 0;
+    return ((precio - costo) / costo) * 100;
+  },
+  calcularTotalVenta(items) {
+    return items.reduce((s, i) => s + i.precio * i.qty, 0);
+  },
+  calcularPendiente(total, abonos = []) {
+    const cobrado = abonos.reduce((s, a) => s + a.monto, 0);
+    return total - cobrado;
+  },
+  calcularAbonosIniciales(tipo, total, abonoInicial, fecha) {
+    if (tipo === 'contado') return [{ monto: total, fecha }];
+    if (tipo === 'abono' && abonoInicial > 0) return [{ monto: abonoInicial, fecha }];
+    return [];
+  },
+  ajustarStock(stock, direccion, cantidad) {
+    return Math.max(0, stock + direccion * cantidad);
+  },
+  calcularResumenVentas(ventas, mes, anio, hoy) {
+    let ventasMes = 0, numVentas = 0, ganancia = 0, porCobrar = 0, cobradoHoy = 0;
+    const deudores = new Set();
+    ventas.forEach((v) => {
+      const d = new Date(v.fecha);
+      if (d.getMonth() === mes && d.getFullYear() === anio) {
+        ventasMes += v.total; numVentas++;
+        const costo = v.items.reduce((s, i) => s + (i.costo || 0) * i.qty, 0);
+        ganancia += v.total - costo;
+      }
+      const pend = v.total - (v.abonos || []).reduce((s, a) => s + a.monto, 0);
+      if (pend > 0.01) { porCobrar += pend; deudores.add(v.clienteId); }
+      (v.abonos || []).forEach((a) => { if (a.fecha === hoy) cobradoHoy += a.monto; });
+    });
+    return { ventasMes, numVentas, ganancia, porCobrar, cobradoHoy, deudores: deudores.size };
+  },
+};
+
+// ═══════════════════════════════════════════════════════════════
+// MINI RUNNER DE TESTS (patrón AAA)
+// ═══════════════════════════════════════════════════════════════
+const resultados = [];
+let total = 0, pasados = 0, fallidos = 0;
+
+function test(nombre, fn) {
+  total++;
+  try {
+    fn();
+    pasados++;
+    resultados.push({ nombre, ok: true });
+  } catch (e) {
+    fallidos++;
+    resultados.push({ nombre, ok: false, error: e.message });
+  }
+}
+
+function assertEqual(actual, esperado, msg) {
+  if (actual !== esperado) {
+    throw new Error(`${msg || 'assertEqual'}\n  esperado: ${JSON.stringify(esperado)}\n  actual:   ${JSON.stringify(actual)}`);
+  }
+}
+function assertDeepEqual(actual, esperado, msg) {
+  const a = JSON.stringify(actual), b = JSON.stringify(esperado);
+  if (a !== b) {
+    throw new Error(`${msg || 'assertDeepEqual'}\n  esperado: ${b}\n  actual:   ${a}`);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// TESTS
+// ═══════════════════════════════════════════════════════════════
+
+// ── calcularPrecioVenta ──
+test('calcularPrecioVenta: precio y ganancia con margen 30%', () => {
+  // Arrange
+  const costo = 100, margen = 30;
+  // Act
+  const r = Logica.calcularPrecioVenta(costo, margen);
+  // Assert
+  assertEqual(r.precio, 130, 'precio');
+  assertEqual(r.ganancia, 30, 'ganancia');
+});
+
+test('calcularPrecioVenta: margen 100% duplica el costo', () => {
+  // Arrange
+  const costo = 50, margen = 100;
+  // Act
+  const r = Logica.calcularPrecioVenta(costo, margen);
+  // Assert
+  assertEqual(r.precio, 100, 'precio');
+  assertEqual(r.ganancia, 50, 'ganancia');
+});
+
+test('calcularPrecioVenta: margen 0 deja el precio igual al costo', () => {
+  // Arrange
+  const costo = 200, margen = 0;
+  // Act
+  const r = Logica.calcularPrecioVenta(costo, margen);
+  // Assert
+  assertEqual(r.precio, 200, 'precio');
+  assertEqual(r.ganancia, 0, 'ganancia');
+});
+
+// ── calcularMargen ──
+test('calcularMargen: devuelve el % de ganancia correcto', () => {
+  // Arrange
+  const costo = 100, precio = 150;
+  // Act
+  const m = Logica.calcularMargen(costo, precio);
+  // Assert
+  assertEqual(m, 50, 'margen');
+});
+
+test('calcularMargen: con costo 0 devuelve 0 (evita div por cero)', () => {
+  // Arrange
+  const costo = 0, precio = 150;
+  // Act
+  const m = Logica.calcularMargen(costo, precio);
+  // Assert
+  assertEqual(m, 0, 'margen');
+});
+
+// ── calcularTotalVenta ──
+test('calcularTotalVenta: suma precio x cantidad de todos los items', () => {
+  // Arrange
+  const items = [{ precio: 100, qty: 2 }, { precio: 50, qty: 1 }, { precio: 25, qty: 4 }];
+  // Act
+  const t = Logica.calcularTotalVenta(items);
+  // Assert
+  assertEqual(t, 350, 'total');
+});
+
+test('calcularTotalVenta: con lista vacía devuelve 0', () => {
+  // Arrange
+  const items = [];
+  // Act
+  const t = Logica.calcularTotalVenta(items);
+  // Assert
+  assertEqual(t, 0, 'total');
+});
+
+// ── calcularPendiente ──
+test('calcularPendiente: resta los abonos del total', () => {
+  // Arrange
+  const total = 300, abonos = [{ monto: 100 }, { monto: 50 }];
+  // Act
+  const p = Logica.calcularPendiente(total, abonos);
+  // Assert
+  assertEqual(p, 150, 'pendiente');
+});
+
+test('calcularPendiente: sin abonos devuelve el total completo', () => {
+  // Arrange
+  const total = 300;
+  // Act
+  const p = Logica.calcularPendiente(total);
+  // Assert
+  assertEqual(p, 300, 'pendiente');
+});
+
+test('calcularPendiente: abonos que cubren el total devuelven 0', () => {
+  // Arrange
+  const total = 300, abonos = [{ monto: 300 }];
+  // Act
+  const p = Logica.calcularPendiente(total, abonos);
+  // Assert
+  assertEqual(p, 0, 'pendiente');
+});
+
+// ── calcularAbonosIniciales ──
+test('calcularAbonosIniciales: contado genera abono por el total', () => {
+  // Arrange
+  const tipo = 'contado', total = 500, abonoInicial = 0, fecha = '2026-08-11';
+  // Act
+  const a = Logica.calcularAbonosIniciales(tipo, total, abonoInicial, fecha);
+  // Assert
+  assertDeepEqual(a, [{ monto: 500, fecha }], 'abonos');
+});
+
+test('calcularAbonosIniciales: abono inicial registra ese monto', () => {
+  // Arrange
+  const tipo = 'abono', total = 500, abonoInicial = 150, fecha = '2026-08-11';
+  // Act
+  const a = Logica.calcularAbonosIniciales(tipo, total, abonoInicial, fecha);
+  // Assert
+  assertDeepEqual(a, [{ monto: 150, fecha }], 'abonos');
+});
+
+test('calcularAbonosIniciales: a crédito no genera abonos', () => {
+  // Arrange
+  const tipo = 'credito', total = 500, abonoInicial = 0, fecha = '2026-08-11';
+  // Act
+  const a = Logica.calcularAbonosIniciales(tipo, total, abonoInicial, fecha);
+  // Assert
+  assertDeepEqual(a, [], 'abonos');
+});
+
+// ── ajustarStock ──
+test('ajustarStock: agrega stock correctamente', () => {
+  // Arrange
+  const stock = 5, dir = 1, cant = 3;
+  // Act
+  const n = Logica.ajustarStock(stock, dir, cant);
+  // Assert
+  assertEqual(n, 8, 'stock');
+});
+
+test('ajustarStock: quita stock correctamente', () => {
+  // Arrange
+  const stock = 5, dir = -1, cant = 2;
+  // Act
+  const n = Logica.ajustarStock(stock, dir, cant);
+  // Assert
+  assertEqual(n, 3, 'stock');
+});
+
+test('ajustarStock: nunca deja el stock en negativo', () => {
+  // Arrange
+  const stock = 2, dir = -1, cant = 10;
+  // Act
+  const n = Logica.ajustarStock(stock, dir, cant);
+  // Assert
+  assertEqual(n, 0, 'stock');
+});
+
+// ── calcularResumenVentas ──
+test('calcularResumenVentas: resume ventas, ganancia, por cobrar y cobrado', () => {
+  // Arrange
+  const ventas = [
+    { id: '1', clienteId: 'c1', fecha: '2026-08-05', total: 200, items: [{ costo: 100, qty: 1 }], abonos: [{ monto: 200, fecha: '2026-08-05' }] },
+    { id: '2', clienteId: 'c2', fecha: '2026-08-10', total: 300, items: [{ costo: 150, qty: 1 }], abonos: [{ monto: 100, fecha: '2026-08-11' }] },
+    { id: '3', clienteId: 'c3', fecha: '2026-07-20', total: 500, items: [{ costo: 200, qty: 1 }], abonos: [] },
+  ];
+  const mes = 7, anio = 2026, hoy = '2026-08-11';
+  // Act
+  const r = Logica.calcularResumenVentas(ventas, mes, anio, hoy);
+  // Assert
+  // Nota: porCobrar y deudores se calculan sobre TODAS las ventas (como en la app),
+  // no solo las del mes. La venta 3 (julio) también está pendiente.
+  assertEqual(r.ventasMes, 500, 'ventasMes');
+  assertEqual(r.numVentas, 2, 'numVentas');
+  assertEqual(r.ganancia, 250, 'ganancia');
+  assertEqual(r.porCobrar, 700, 'porCobrar'); // 200 (agosto) + 500 (julio)
+  assertEqual(r.cobradoHoy, 100, 'cobradoHoy');
+  assertEqual(r.deudores, 2, 'deudores'); // c2 y c3
+});
+
+// ═══════════════════════════════════════════════════════════════
+// RENDERIZAR RESULTADOS
+// ═══════════════════════════════════════════════════════════════
+document.getElementById('total').textContent = total;
+document.getElementById('pasados').textContent = pasados;
+document.getElementById('fallidos').textContent = fallidos;
+
+const grupos = {
+  'calcularPrecioVenta': '🏷️ Precio de venta',
+  'calcularMargen': '📊 Margen de ganancia',
+  'calcularTotalVenta': '🧾 Total de venta',
+  'calcularPendiente': '💳 Crédito / pendiente',
+  'calcularAbonosIniciales': '💰 Abonos iniciales',
+  'ajustarStock': '📦 Control de stock',
+  'calcularResumenVentas': '📅 Resumen del mes',
+};
+
+const cont = document.getElementById('resultados');
+let html = '';
+for (const [fn, titulo] of Object.entries(grupos)) {
+  const tests = resultados.filter(r => r.nombre.startsWith(fn));
+  if (!tests.length) continue;
+  html += `<div class="group"><div class="group-title">${titulo} <span class="badge badge-aaa">${fn}</span></div>`;
+  tests.forEach(t => {
+    html += `<div class="test ${t.ok ? 'pass' : 'fail'}">
+      <span class="icon">${t.ok ? '✓' : '✗'}</span>
+      <div class="name">${t.nombre}${t.ok ? '' : `<div class="detail">${t.error}</div>`}</div>
+    </div>`;
+  });
+  html += '</div>';
+}
+cont.innerHTML = html;
+</script>
+</body>
+</html>
