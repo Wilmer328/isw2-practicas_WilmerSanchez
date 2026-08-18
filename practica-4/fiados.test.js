@@ -32,3 +32,15 @@ test("rechaza un monto negativo", () => {
 
   assertEqual(huboError, true);
 });
+
+test("calcula 5% de mora cuando hay días vencidos", () => {
+  // Arrange
+  const monto = 1000;
+  const diasVencidos = 5;
+
+  // Act
+  const resultado = calcularMora(monto, diasVencidos);
+
+  // Assert
+  assertEqual(resultado, 50);
+});
