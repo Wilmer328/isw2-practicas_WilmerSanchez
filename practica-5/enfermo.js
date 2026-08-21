@@ -1,61 +1,71 @@
-function procesarCompra(cliente, productos, pago) {
-  console.log("Procesando compra de " + cliente);
+const DESCUENTO_COMPRA_GRANDE = 0.05;
 
-  let totalCompra = 0;
-  let cantidadTotalProductos = 0;
+function calcularTotal(productos) {
+  let totalProductos = 0;
 
-  for (
-    let indiceProducto = 0;
-    indiceProducto < productos.length;
-    indiceProducto++
-  ) {
-    let productoActual = productos[indiceProducto];
+  for (let i = 0; i < productos.length; i++) {
+    const producto = productos[i];
 
-    if (productoActual.precio < 0) {
+    if (producto.precio < 0) {
       throw new Error("Precio inválido");
     }
 
-    totalCompra =
-      totalCompra + productoActual.precio * productoActual.cantidad;
+    totalProductos =
+      totalProductos + producto.precio * producto.cantidad;
+  }
 
-    cantidadTotalProductos =
-      cantidadTotalProductos + productoActual.cantidad;
+  return totalProductos;
+}
+
+function procesarCompra(cliente, productos, pago) {
+  console.log("Procesando compra de " + cliente);
+
+  let cantidadProductos = 0;
+
+  for (let i = 0; i < productos.length; i++) {
+    const producto = productos[i];
+
+    if (producto.precio < 0) {
+      throw new Error("Precio inválido");
+    }
+
+    cantidadProductos = cantidadProductos + producto.cantidad;
 
     console.log(
       "Producto: " +
-        productoActual.nombre +
+        producto.nombre +
         " cantidad: " +
-        productoActual.cantidad
+        producto.cantidad
     );
   }
 
-  if (cantidadTotalProductos === 0) {
+  if (cantidadProductos === 0) {
     throw new Error("La compra está vacía");
   }
 
- const FACTOR_DESCUENTO = 0.95;
+  let total = calcularTotal(productos);
 
-if (totalCompra > 1000) {
-  totalCompra = totalCompra * FACTOR_DESCUENTO;
-}
+  if (total > 1000) {
+    total = total * (1 - DESCUENTO_COMPRA_GRANDE);
+  }
 
-  if (pago < totalCompra) {
+  if (pago < total) {
     throw new Error("Pago insuficiente");
   }
 
-  let cambio = pago - totalCompra;
+  const cambio = pago - total;
 
   console.log("Cliente: " + cliente);
-  console.log("Subtotal: " + totalCompra);
-  console.log("Cantidad de productos: " + cantidadTotalProductos);
+  console.log("Subtotal: " + total);
+  console.log("Cantidad de productos: " + cantidadProductos);
   console.log("Pago recibido: " + pago);
   console.log("Cambio: " + cambio);
   console.log("Compra procesada correctamente");
 
   return {
     cliente: cliente,
-    total: totalCompra,
-    cantidad: cantidadTotalProductos,
+    total: total,
+    cantidad: cantidadProductos,
     cambio: cambio
   };
 }
