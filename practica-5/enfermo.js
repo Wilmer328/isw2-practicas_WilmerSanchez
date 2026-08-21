@@ -1,7 +1,9 @@
 const DESCUENTO_COMPRA_GRANDE = 0.05;
 
-function calcularTotal(productos) {
-  let totalProductos = 0;
+function validarCompra(productos) {
+  if (productos.length === 0) {
+    throw new Error("La compra está vacía");
+  }
 
   for (let i = 0; i < productos.length; i++) {
     const producto = productos[i];
@@ -9,6 +11,14 @@ function calcularTotal(productos) {
     if (producto.precio < 0) {
       throw new Error("Precio inválido");
     }
+  }
+}
+
+function calcularTotal(productos) {
+  let totalProductos = 0;
+
+  for (let i = 0; i < productos.length; i++) {
+    const producto = productos[i];
 
     totalProductos =
       totalProductos + producto.precio * producto.cantidad;
@@ -20,14 +30,12 @@ function calcularTotal(productos) {
 function procesarCompra(cliente, productos, pago) {
   console.log("Procesando compra de " + cliente);
 
+  validarCompra(productos);
+
   let cantidadProductos = 0;
 
   for (let i = 0; i < productos.length; i++) {
     const producto = productos[i];
-
-    if (producto.precio < 0) {
-      throw new Error("Precio inválido");
-    }
 
     cantidadProductos = cantidadProductos + producto.cantidad;
 
