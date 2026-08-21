@@ -33,9 +33,11 @@ function procesarCompra(cliente, productos, pago) {
     throw new Error("La compra está vacía");
   }
 
-  if (totalCompra > 1000) {
-    totalCompra = totalCompra * 0.95;
-  }
+ const FACTOR_DESCUENTO = 0.95;
+
+if (totalCompra > 1000) {
+  totalCompra = totalCompra * FACTOR_DESCUENTO;
+}
 
   if (pago < totalCompra) {
     throw new Error("Pago insuficiente");
