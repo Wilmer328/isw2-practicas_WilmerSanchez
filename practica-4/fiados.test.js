@@ -97,3 +97,65 @@ test("calcula correctamente la mora para un monto decimal", () => {
   // Assert
   assertEqual(Math.round(resultado * 1000) / 1000, 25.025);
 });
+
+test("calcula la mora sobre el saldo después de un abono parcial", () => {
+  // Arrange
+  const monto = 1000;
+  const diasVencidos = 5;
+  const abono = 400;
+
+  // Act
+  const resultado = calcularMora(monto, diasVencidos, abono);
+
+  // Assert
+  assertEqual(resultado, 30);
+});
+
+test("no cobra mora cuando el abono cubre toda la deuda", () => {
+  // Arrange
+  const monto = 1000;
+  const diasVencidos = 5;
+  const abono = 1000;
+
+  // Act
+  const resultado = calcularMora(monto, diasVencidos, abono);
+
+  // Assert
+  assertEqual(resultado, 0);
+});
+
+test("rechaza un abono mayor que el monto de la deuda", () => {
+  // Arrange
+  const monto = 1000;
+  const diasVencidos = 5;
+  const abono = 1200;
+
+  // Act + Assert
+  let huboError = false;
+
+  try {
+    calcularMora(monto, diasVencidos, abono);
+  } catch (error) {
+    huboError = true;
+  }
+
+  assertEqual(huboError, true);
+});
+
+test("rechaza un abono negativo", () => {
+  // Arrange
+  const monto = 1000;
+  const diasVencidos = 5;
+  const abono = -100;
+
+  // Act + Assert
+  let huboError = false;
+
+  try {
+    calcularMora(monto, diasVencidos, abono);
+  } catch (error) {
+    huboError = true;
+  }
+
+  assertEqual(huboError, true);
+});
